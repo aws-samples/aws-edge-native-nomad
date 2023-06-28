@@ -1,0 +1,4 @@
+- include: roles/init/tasks/debian_init.yml
+  name: Init board based on OS family
+  when: ansible_os_family == 'Debian'
+  tags: package

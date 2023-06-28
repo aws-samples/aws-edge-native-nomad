@@ -1,0 +1,6 @@
+boto3
+requests
+cryptography
+paho-mqtt
+wheel
+ansible

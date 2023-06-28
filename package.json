@@ -1,0 +1,35 @@
+{
+  "name": "aws-edge-native-nomad",
+  "version": "0.1.0",
+  "bin": {
+    "nomad-edge-native": "bin/edge-native.js"
+  },
+  "scripts": {
+    "build": "npx eslint . && npx tsc && npx cdk synth",
+    "watch": "npx tsc -w",
+    "test": "jest",
+    "cdk": "npx cdk",
+    "nag": "npx cdk synth --app='npx ts-node test/edge-native.nag.ts'",
+    "clean": "./node_modules/ts-clean/dist/bin.js && find bin/ lib/ test/ -iname \"*.d.ts\" | xargs rm -f"
+  },
+  "devDependencies": {
+    "@types/jest": "^27.5.2",
+    "@types/node": "10.17.27",
+    "@types/prettier": "2.6.0",
+    "@typescript-eslint/eslint-plugin": "^5.59.8",
+    "@typescript-eslint/parser": "^5.59.8",
+    "aws-cdk": "2.81.0",
+    "cdk-nag": "^2.27.22",
+    "eslint": "^8.41.0",
+    "jest": "^29.5.0",
+    "ts-clean": "^1.0.3",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.1",
+    "typescript": "~5.0.4"
+  },
+  "dependencies": {
+    "@types/uuid": "^8.3.4",
+    "aws-cdk-lib": "2.81.0",
+    "constructs": "^10.0.0"
+  }
+}

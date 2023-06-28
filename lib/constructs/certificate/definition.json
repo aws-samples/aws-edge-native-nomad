@@ -1,0 +1,187 @@
+{
+  "Comment": "Workflow to create a CSR, use it to issue a certificate from ACM PCA and save the result in Secrets Manager.",
+  "StartAt": "GenerateNomadCertificates",
+  "States": {
+    "Success": {
+      "Type": "Succeed"
+    },
+    "GenerateNomadCertificates": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${csrLambdaName}",
+        "Payload": {
+          "acmPcaArn": "${acmPcaArn}",
+          "commonName": "${commonName}",
+          "subjectAlternativeName": "${subjectAlternativeName}",
+          "expiryDays": "${expiryDays}",
+          "secretPrefix": "${secretPrefix}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Parallel",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Fail"
+        }
+      ],
+      "ResultPath": "$.GenerateNomadCertificates"
+    },
+    "Parallel": {
+      "Type": "Parallel",
+      "Next": "Success",
+      "Branches": [
+        {
+          "StartAt": "DescribeNomadPrivateKeySecret",
+          "States": {
+            "DescribeNomadPrivateKeySecret": {
+              "Type": "Task",
+              "Parameters": {
+                "SecretId.$": "$.GenerateNomadCertificates.Payload.privateKeySecretId"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:secretsmanager:describeSecret",
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.TaskFailed"
+                  ],
+                  "Next": "CreateNomadPrivateKeySecret",
+                  "ResultPath": "$.error"
+                }
+              ],
+              "ResultPath": null,
+              "Next": "PutNomadPrivateKeySecretValue"
+            },
+            "CreateNomadPrivateKeySecret": {
+              "Type": "Task",
+              "Parameters": {
+                "Name.$": "$.GenerateNomadCertificates.Payload.privateKeySecretId",
+                "Description": "The Nomad Private Key",
+                "SecretString.$": "$.GenerateNomadCertificates.Payload.privateKey",
+                "ForceOverwriteReplicaSecret": true
+              },
+              "Resource": "arn:aws:states:::aws-sdk:secretsmanager:createSecret",
+              "ResultPath": null,
+              "End": true
+            },
+            "PutNomadPrivateKeySecretValue": {
+              "Type": "Task",
+              "End": true,
+              "Parameters": {
+                "SecretId.$": "$.GenerateNomadCertificates.Payload.privateKeySecretId",
+                "SecretString.$": "$.GenerateNomadCertificates.Payload.privateKey"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:secretsmanager:putSecretValue"
+            }
+          }
+        },
+        {
+          "StartAt": "DescribeNomadCertificateSecret",
+          "States": {
+            "DescribeNomadCertificateSecret": {
+              "Type": "Task",
+              "Parameters": {
+                "SecretId.$": "$.GenerateNomadCertificates.Payload.certificateSecretId"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:secretsmanager:describeSecret",
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.TaskFailed"
+                  ],
+                  "Next": "CreateNomadCertificateSecret",
+                  "ResultPath": "$.error"
+                }
+              ],
+              "ResultPath": null,
+              "Next": "PutNomadCertificateSecretValue"
+            },
+            "CreateNomadCertificateSecret": {
+              "Type": "Task",
+              "Parameters": {
+                "Name.$": "$.GenerateNomadCertificates.Payload.certificateSecretId",
+                "Description": "The Nomad Certificate",
+                "SecretString.$": "$.GenerateNomadCertificates.Payload.certificate",
+                "ForceOverwriteReplicaSecret": true
+              },
+              "Resource": "arn:aws:states:::aws-sdk:secretsmanager:createSecret",
+              "ResultPath": null,
+              "End": true
+            },
+            "PutNomadCertificateSecretValue": {
+              "Type": "Task",
+              "End": true,
+              "Parameters": {
+                "SecretId.$": "$.GenerateNomadCertificates.Payload.certificateSecretId",
+                "SecretString.$": "$.GenerateNomadCertificates.Payload.certificate"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:secretsmanager:putSecretValue"
+            }
+          }
+        },
+        {
+          "StartAt": "DescribeCaCertificateSecret",
+          "States": {
+            "DescribeCaCertificateSecret": {
+              "Type": "Task",
+              "Parameters": {
+                "SecretId.$": "$.GenerateNomadCertificates.Payload.caCertSecretId"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:secretsmanager:describeSecret",
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.TaskFailed"
+                  ],
+                  "Next": "CreateCaCertificateSecret",
+                  "ResultPath": "$.error"
+                }
+              ],
+              "ResultPath": null,
+              "Next": "PutCaCertificateSecretValue"
+            },
+            "CreateCaCertificateSecret": {
+              "Type": "Task",
+              "Parameters": {
+                "Name.$": "$.GenerateNomadCertificates.Payload.caCertSecretId",
+                "Description": "The CA Certificate",
+                "SecretString.$": "$.GenerateNomadCertificates.Payload.caCertificate",
+                "ForceOverwriteReplicaSecret": true
+              },
+              "Resource": "arn:aws:states:::aws-sdk:secretsmanager:createSecret",
+              "ResultPath": null,
+              "End": true
+            },
+            "PutCaCertificateSecretValue": {
+              "Type": "Task",
+              "End": true,
+              "Parameters": {
+                "SecretId.$": "$.GenerateNomadCertificates.Payload.caCertSecretId",
+                "SecretString.$": "$.GenerateNomadCertificates.Payload.caCertificate"
+              },
+              "Resource": "arn:aws:states:::aws-sdk:secretsmanager:putSecretValue"
+            }
+          }
+        }
+      ],
+      "ResultPath": null
+    },
+    "Fail": {
+      "Type": "Fail"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+---
+- name: Update repositories cache and install package
+  become: true
+  ansible.builtin.apt:
+    pkg:
+      - unzip
+      - python3-pip
+    state: latest
+    update_cache: yes

@@ -1,0 +1,9 @@
+---
+- include: roles/docker/tasks/docker_debian.yml
+  name: Docker debian switch
+  when: ansible_distribution == 'Debian'
+  tags: package
+- include: roles/docker/tasks/docker_ubuntu.yml
+  name: Docker ubuntu switch
+  when: ansible_distribution == 'Ubuntu'
+  tags: package

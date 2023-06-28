@@ -1,0 +1,152 @@
+---
+- name: Download AmazonRootCa!
+  delegate_to: localhost
+  run_once: true
+  become: false
+  ansible.builtin.get_url:
+    url: https://www.amazontrust.com/repository/AmazonRootCA1.pem
+    dest: generated/AmazonRootCA1.pem
+    mode: '0440'
+- name: Check if certificate already exist
+  become: false
+  stat:
+    path: generated/ca.pem
+  register: stat_ca_result
+  delegate_to: localhost
+  run_once: true
+- name: Downloading CA certificate
+  become: false
+  delegate_to: localhost
+  run_once: true
+  copy:
+    dest: "generated/ca.pem"
+    content: "{{ lookup('amazon.aws.aws_secret', 'ca-caCertificate' ) }}"
+  when: not stat_ca_result.stat.exists
+- name: Check if client certificate already exist
+  become: false
+  stat:
+    path: generated/{{ group_names[0] }}-key.pem
+  register: stat_result
+  delegate_to: localhost
+  run_once: true
+- name: Create certificate
+  become: false
+  command: python3 ./provisioner.py {{ group_names[0] }} {{ aws_profile }} {{ acm_pca_arn }} {{ region }}
+  delegate_to: localhost
+  run_once: true
+  when: not stat_result.stat.exists
+- name: Ensure group "nomad" exists
+  ansible.builtin.group:
+    name: nomad
+    state: present
+- name: Add the user "nomad" 
+  ansible.builtin.user:
+    name: nomad
+    group: nomad
+- name: Add the user "nobody" 
+  ansible.builtin.user:
+    name: nobody
+    group: nomad
+- name: Create certificates directory if it does not exist
+  ansible.builtin.file:
+    path: /root/certificates
+    state: directory
+    mode: '0755'
+- name: Create CNI directory if it does not exist
+  ansible.builtin.file:
+    path: /opt/cni/bin/
+    state: directory
+    mode: '0755'
+- name: Create nomad data directory
+  ansible.builtin.file:
+    path: /opt/nomad/data
+    state: directory
+    owner: nomad
+    group: nomad
+    mode: '0755'
+- name: Create nomad config directory
+  ansible.builtin.file:
+    path: /opt/nomad/config
+    state: directory
+    owner: root
+    group: nomad
+    mode: '0755'
+- name: Upload private key
+  ansible.builtin.copy:
+    src: generated/{{ group_names[0] }}-key.pem
+    dest: /root/certificates/device-key.pem
+    owner: nomad
+    group: nomad
+    mode: '0440'
+- name: Upload certificate
+  ansible.builtin.copy:
+    src: generated/{{ group_names[0] }}.pem
+    dest: /root/certificates/device.pem
+    owner: nomad
+    group: nomad
+    mode: '0440'
+- name: Upload CS certificate
+  ansible.builtin.copy:
+    src: generated/ca.pem
+    dest: /root/certificates/ca.pem
+    owner: nomad
+    group: nomad
+    mode: '0400'
+- name: Upload AmazonRootCA1
+  ansible.builtin.copy:
+    src: generated/AmazonRootCA1.pem
+    dest: /root/certificates/AmazonRootCA1.pem
+    owner: nomad
+    group: nomad
+    mode: '0400'
+
+- include: roles/nomad/tasks/download_{{ ansible_architecture }}.yml
+  name: x86_64 section
+  when: ansible_architecture == 'x86_64'
+  tags: package
+- include: roles/nomad/tasks/download_arm64.yml
+  name: arm64 section
+  when: ansible_architecture == 'aarch64'
+  tags: package
+- include: roles/nomad/tasks/download_arm.yml
+  name: arm section
+  when: ansible_architecture == 'armv7l'
+  tags: package
+- name: Upload  nomad config
+  ansible.builtin.template:
+    src: templates/nomad.hcl.j2
+    dest: /opt/nomad/config/nomad.hcl
+    owner: root
+    group: nomad
+    mode: '0644'
+    variable_end_string: ']]'
+    variable_start_string: '[['
+  vars:
+    robot_id: "[[ group_names[0] ]]"
+    user: "[[ ansible_user ]]"
+- include: roles/nomad/tasks/debian_nomad.yml
+  name: Init board based on OS family
+  when: ansible_os_family == 'Debian'
+  tags: package
+- include: "{{lookup('ansible.builtin.first_found', params)}}"
+  name: Install docker credential helper based on OS specificities
+  vars:
+    params:
+      files:
+        - 'ecr_login_{{ ansible_distribution | lower }}_{{ ansible_distribution_major_version }}.yml'
+        - 'ecr_login_{{ ansible_os_family | lower }}.yml'
+        - default.yml
+      paths:
+        - 'roles/nomad/tasks'
+- name: Create  docker config if it does not exist
+  ansible.builtin.file:
+    path: /root/.docker
+    state: directory
+    mode: '0755'
+- name: Set config file for docker
+  ansible.builtin.copy:
+    src: files/docker/config.json
+    dest: /root/.docker/config.json
+    owner: root
+    group: root
+    mode: '0644'

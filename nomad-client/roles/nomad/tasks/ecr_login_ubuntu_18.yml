@@ -1,0 +1,18 @@
+---
+- name: Install golang
+  ansible.builtin.unarchive:
+    src: "https://go.dev/dl/go1.19.2.linux-arm64.tar.gz"
+    dest: /usr/local
+    mode: 0755
+    remote_src: yes
+- name: Install ECR Login credentials helper from source
+  ansible.builtin.command: go install github.com/awslabs/amazon-ecr-credential-helper/ecr-login/cli/docker-credential-ecr-login@latest
+  environment:
+    GOPATH: /home/{{ ansible_user }}/go
+    PATH: '/usr/local/go/bin:{{ ansible_env.PATH }}'
+- name: Move executable to executable directory
+  ansible.builtin.copy:
+    src: /home/{{ ansible_user }}/go/bin/docker-credential-ecr-login
+    dest: /usr/bin/docker-credential-ecr-login
+    mode: '0755'
+    remote_src: yes

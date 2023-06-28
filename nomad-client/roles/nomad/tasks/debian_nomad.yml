@@ -1,0 +1,19 @@
+---
+- name: Upload nomad service file
+  become: true
+  ansible.builtin.copy:
+    src: files/nomad.service
+    dest: /etc/systemd/system/nomad.service
+    owner: root
+    group: nomad
+    mode: '0644'
+- name: Reload all services  manage by systemd
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: yes
+- name: start nomad service
+  become: true
+  ansible.builtin.systemd:
+    state: restarted
+    name: nomad
+    enabled: yes

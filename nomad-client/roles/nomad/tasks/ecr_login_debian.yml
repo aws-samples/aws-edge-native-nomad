@@ -1,0 +1,6 @@
+---
+- name: Install docker credential helper for ECR via apt
+  apt:
+    name: amazon-ecr-credential-helper
+    state: latest
+    update_cache: true

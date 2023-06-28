@@ -1,0 +1,19 @@
+{
+    "cluster": {
+        "datacenter_name": "control-plane",
+        "instance_count": 3,
+        "nomad_region": "eu-west-1",
+        "discovery_tag_key": "nomad-type",
+        "discovery_tag_value": "server"
+    },
+    "certificates": {
+        "ca_cert_secret_name" : "ca-caCertificate",
+        "server_cert_secret_name" : "nomad-server-eu-west-1-Certificate",
+        "server_private_key_secret_name": "nomad-server-eu-west-1-PrivateKey"
+    },
+    "authentication": {
+        "username": "admin",
+        "email": "<your email>",
+        "domain_prefix": "<your cognito domain>"
+    }
+}

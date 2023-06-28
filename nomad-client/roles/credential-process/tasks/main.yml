@@ -1,0 +1,20 @@
+---
+- name: Create directory if it does not exist
+  ansible.builtin.file:
+    path: /root/aws
+    state: directory
+    mode: '0755'
+- name: Upload signing helper bin
+  ansible.builtin.copy:
+    src: files/credential-process/aws_signing_helper
+    dest: /usr/bin/aws_signing_helper
+    mode: '0755'
+- name: Upload credentials file
+  ansible.builtin.template:
+    src: templates/credentials.j2
+    dest: /root/aws/credentials
+    owner: root
+    group: nomad
+    mode: '0644'
+    variable_end_string: ']]'
+    variable_start_string: '[['

@@ -1,0 +1,54 @@
+data_dir   = "/opt/nomad/data"
+datacenter = "[[ robot_id ]]"
+log_level  = "WARN"
+
+client {
+  # configure nomad client for allocating port to the loopback interface instead of the local network
+  network_interface = "lo"
+  enabled          = true
+  server_join {
+    retry_join = ["[[ cluster_url ]]"]
+  }
+  # credentials file for AWS service API calls
+  host_volume "aws-shared-credentials" {
+    path      = "/root/aws/"
+    read_only = true
+  }
+  # certificates for aws credentials
+  host_volume "iot-certificates" {
+    path      = "/root/certificates/"
+    read_only = true
+  }
+}
+
+region="[[ region ]]"
+
+# Require TLS
+tls {
+  http = true
+  rpc  = true
+
+  ca_file   = "/root/certificates/ca.pem"
+  cert_file = "/root/certificates/device.pem"
+  key_file  = "/root/certificates/device-key.pem"
+
+  verify_server_hostname = true
+  verify_https_client    = true
+}
+
+
+plugin "docker" {
+  config {
+    auth {
+      # configure docker credential helper for Amazon ECR
+      # Nomad will prepend "docker-credential-" to the helper value and call
+      # that script name.
+      helper = "ecr-login"
+    }
+    volumes {
+      enabled = true
+    }
+  }
+  
+}
+

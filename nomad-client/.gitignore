@@ -1,0 +1,4 @@
+venv
+*.iml
+*.idea
+generated

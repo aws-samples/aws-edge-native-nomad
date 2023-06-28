@@ -4,8 +4,8 @@ import * as stepfunctions from "aws-cdk-lib/aws-stepfunctions"
 import * as iam from "aws-cdk-lib/aws-iam"
 import * as lambda from "aws-cdk-lib/aws-lambda"
 import * as cdk from "aws-cdk-lib"
-import * as events from 'aws-cdk-lib/aws-events';
-import * as targets from 'aws-cdk-lib/aws-events-targets';
+import * as events from "aws-cdk-lib/aws-events"
+import * as targets from "aws-cdk-lib/aws-events-targets"
 
 import * as path from "path"
 import * as fs from "fs"
@@ -87,15 +87,15 @@ export class SecretsManagerCertificate extends Construct {
         )
 
         // Trigger state machine execution when a certificate is installed
-        const rule = new events.Rule(this, 'Rule', {
+        const rule = new events.Rule(this, "Rule", {
             eventPattern: {
-              source: ['aws.acm-pca'],
-              detailType: ['AWS API Call via CloudTrail'], // Set detail type to AWS API Call via CloudTrail
-              detail: {
-                eventName: ['ImportCertificateAuthorityCertificate'],
-              },
+                source: ["aws.acm-pca"],
+                detailType: ["AWS API Call via CloudTrail"], // Set detail type to AWS API Call via CloudTrail
+                detail: {
+                    eventName: ["ImportCertificateAuthorityCertificate"],
+                },
             },
-        });
+        })
     }
 
     private getLambdaRole(): iam.Role {

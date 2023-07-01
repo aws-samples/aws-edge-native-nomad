@@ -139,6 +139,8 @@ Output variables are stored in SSM Parameter
 | `/infrastructure/trust_anchor/arn`                | the ARN of the trust anchor used with IAM Role Anywhere         |
 
 ### Connect an edge device to the cloud
+Please note that currently this provisioning script has only been tested on a Raspberry Pi 4 installed with Rasberry Pi OS Lite (64-bit). If you have a different target you can modify the ansible scripts to meet your needs.
+
 From the root of this git repository, please run:
 
 1. Update the file ./inventory/inventory.yml with the SBC ssh connection setting.
@@ -158,16 +160,20 @@ From the root of this git repository, please run:
     ```bash
     pip install -r requirements.txt
     ```
-6. ping all instances:
+6. Edit the host names and ssh keys in [inventory.yml](./nomad-client/inventory.yml)
+7. Use ping to check the instances are reachable:
     ```bash
     ansible  -i ./inventory/inventory.yml -m ping all
     ```
-7. Edit variables in [playbook.yml](./nomad-client/playbook.yml) to match your CloudFormation outputs of your Stack
-8. Run the playbook:
+8. Review and edit the `aws_region` and `profile` in [playbook.yml](./nomad-client/playbook.yml) to match your AWS credentials. Note that the region must match the one you deployed the CDK stack to since the ansible tasks will fetch parameters from AWS SSM Parameter Store to configure the nomad agent.
+9. Run the playbook. This will install all the necissary dependencies and provision certificates to the device:
     ```bash
     ansible-playbook -i ./inventory/inventory.yml playbook.yml 
     ```
 
+If the playbook completes successfully, you should now see clients connected to your Nomad cluster in the the ready state.
+
+![Nomad Clients](assets/nomadui-clients.png)
 
 ## Testing the platform
 ### Deploying a Nomad Job
@@ -190,8 +196,10 @@ Either the Nomad CLI or the Nomad GUI can be used to create jobs
     ```bash
     nomad job run -check-index 0 scripts/iot-publish.nomad.hcl
     ```
-5. Log into the Nomad GUI and check the logs of the job
+5. Log into the Nomad UI and check the job status and logs
+![Nomad Jobs](assets/nomadui-job.png)
 6. Log into the AWS IoT console and use the MQTT test client to view messages on the `hello/world` topic
+![AWS IoT](assets/aws-iot.png)
 
 Note how we mount the following volumes in the [job](scripts/iot-publish.nomad.hcl) - this is required for boto3 to use the certificate to generate temporary credentials to make AWS Signature Version 4 requests using temporary credentials.
 
@@ -204,6 +212,7 @@ Note how we mount the following volumes in the [job](scripts/iot-publish.nomad.h
 ```
 
 Also note that the AWS API requests must be allowed by the `iamRolesAnywhereProfileRole` defined in [iam-any-stack.ts](lib/iam-any-stack.ts). The IoT publish example works because we include the managed policy `AWSIoTDataAccess`.
+
 
 ### Testing disconnection from control plane
 We can simulate a disconnected client which has no internet access by using a firewall on the edge decive to block the outbound connections from the edge to the control plane.

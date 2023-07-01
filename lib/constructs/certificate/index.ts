@@ -94,8 +94,17 @@ export class SecretsManagerCertificate extends Construct {
                 detail: {
                     eventName: ["ImportCertificateAuthorityCertificate"],
                 },
-            },
+            }
         })
+
+        const eventsRole = new iam.Role(this, 'EventsRole', {
+            assumedBy: new iam.ServicePrincipal('events.amazonaws.com'),
+        });
+
+        rule.addTarget(new targets.SfnStateMachine(nomadCertStepfunction, {
+            input: events.RuleTargetInput.fromObject({ }),
+            role: eventsRole
+        }));
     }
 
     private getLambdaRole(): iam.Role {

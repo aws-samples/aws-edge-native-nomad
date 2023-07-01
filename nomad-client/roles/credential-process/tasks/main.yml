@@ -9,6 +9,11 @@
     src: files/credential-process/aws_signing_helper
     dest: /usr/bin/aws_signing_helper
     mode: '0755'
+- name: Fetch variables from AWS SSM Parameter Store
+  set_fact: 
+    iam_any_trust_anchor_arn: "{{ lookup('amazon.aws.aws_ssm', '/infrastructure/trust_anchor/arn', region=aws_region, aws_profile=profile) }}"
+    iam_any_profile_arn: "{{ lookup('amazon.aws.aws_ssm', '/infrastructure/profile/arn', region=aws_region, aws_profile=profile) }}"
+    iam_any_role_arn: "{{ lookup('amazon.aws.aws_ssm', '/infrastructure/role/arn', region=aws_region, aws_profile=profile) }}"
 - name: Upload credentials file
   ansible.builtin.template:
     src: templates/credentials.j2

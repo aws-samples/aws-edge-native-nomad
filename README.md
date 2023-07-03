@@ -14,7 +14,7 @@
 
 ## Description
 The aim of this repository is to deploy a containerized edge native application. Here we focus on architecture:
-* edge device are powerful enough to run  container (like raspberry pi 3 or 4)
+* edge device are powerful enough to run  container (like Raspberry pi 3 or 4)
 * the application  needs  to interact with AWS cloud
 
 The proposed architecture relies on three main components:
@@ -37,9 +37,10 @@ The second topic  focuses on the deployment of the cloud part of the samples: th
 
 The last topic focuses on the edge part of the sample: how to connect your edge device to the cloud.
 
-**Warning:** Deploying those stacks will  create resources which are not of the free tier especially a private CA using AWS Private ACM. The pricing can be found here.
+**Warning:** Deploying those stacks will  create resources which are not of the free tier especially a private CA using AWS Private ACM. The pricing can be found [here](https://aws.amazon.com/private-ca/pricing/).
 ### pre-requisite
 * The tutorial should be executed on a local workstation, not an on remote workspace such as Cloud9.
+* It is recommended to deploy resources on Ireland region (`eu-west-1`)
 * [jq](https://jqlang.github.io/jq/)
 * [open](https://ss64.com/osx/open.html) (for MacOS), [xdg-open](https://linux.die.net/man/1/xdg-open) (for Linux)
 * [CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_install)
@@ -50,9 +51,9 @@ The last topic focuses on the edge part of the sample: how to connect your edge 
 * python (at least version 3.7)
 * an AWS account
     * AWS credentials with sufficient permission
-* the Account and the region should be bootstrapped following official documentation
-* at least 1 single board computer such as raspberry pi 3 or 4 or nvidia jetson.
-    * your laptop should be able to access your SBC using IP or hostname.
+* the Account and the region should be bootstrapped following [official documentation](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html)
+* at least 1 single board computer such as raspberry pi 3 or 4 or NVIDIA jetson.
+    * your laptop should be able to access your SBC using IP or host name.
     * you should own a way to connect to your SBC using SSH but without password (like SSH key)
     * `openssh-sftp-server` should be install
         * In /etc/ssh/sshd_conf add Subsystem sftp internal-sftp and restart sshd
@@ -61,12 +62,12 @@ The last topic focuses on the edge part of the sample: how to connect your edge 
 
 ### Deploy the cloud infrastructure
 
-Please open a terminal on go at the root of the project:
+Please open a terminal and go at the root of the project:
 0. Set up environment variable. Those variables are required so CDK can customize the number of availability zone based on the region it is currently deployed.
     1. `export CDK_DEFAULT_REGION=<your region>`
     2. `export CDK_DEFAULT_ACCOUNT=<your account>`
 
-1. Modify the [Input variables](#input-variables) in [deployment.json](deployment.json) as described below. Especially the `authentication` settings [deployment file](./deployment.json) (`deployment.json`) with your email address and a prefix. The email should be valid as you are going to receive a password from Cognito. The prefix should  be uniq and made of lowercase, alphanumeric character.
+1. Modify the [Input variables](#input-variables) in [deployment.json](deployment.json) as described below. Especially the `authentication` settings with your email address and a custom prefix. The email should be valid as you are going to receive a password from Cognito. The prefix should  be unique and made of lowercase, alphanumeric character.
 2. Install the required npm packages
    ```bash
     npm install
@@ -80,15 +81,17 @@ Please open a terminal on go at the root of the project:
     Successfully synthesized to container-in-robot/cdk.out
     Supply a stack id (AcmPcaStack, NomadInfrastructureStack, IamAnyStack) to display its template.
     ```
-4. Before deploying the CDK stack we need to authenticate to the ECR public docker repository since we use some of the images in the build.
-   ```bash
+4. Before deploying the CDK stack we need to authenticate to the ECR public docker repository since we use some public images in the build.
+    ```bash
     aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
     ```
-       You should see the following output:
-    ```
+
+    You should see the following output:
+    
+   ```
     Login Succeeded
     ```
-5. Deploy the `AcmPcaStack`. Note if you already have a PKI infrastructure this is optionals, and you can make modifications to integrate that with the rest of the infrastructure.
+5. Deploy the `AcmPcaStack`. Note if you already have a PKI infrastructure this is optional, and you can make modifications to integrate that with the rest of the infrastructure.
    ```bash
     cdk deploy AcmPcaStack
     ```
@@ -112,8 +115,8 @@ Please open a terminal on go at the root of the project:
 All the input variables are defined in file [deployment.json](deployment.json). Below you can find a detailed explanation:
 * `authentication`
     * `username` : the name of the Nomad user, default is `admin`.
-    * `email` : the email associated with the Nomad user default. It has to be a valid email address because the password will be sent to this address
-    * `domain_prefix` a unique prefix that will be use host the authentication UI of cognito. The prefix should follow [RFC 952](https://datatracker.ietf.org/doc/html/rfc952) requirements
+    * `email` : the email associated with the Nomad user default. It has to be a valid email address because the password will be sent to this address.
+    * `domain_prefix` a unique prefix that will be use host the authentication UI of Cognito. The prefix should follow [RFC 952](https://datatracker.ietf.org/doc/html/rfc952) requirements.
 * `cluster`
     * `datacenter_name` : the name of the data center associated with the nomad server, default is `control-plane`.
     * `instance_count` : the number of nomad server in the cluster, default is `3`.
@@ -139,7 +142,7 @@ Output variables are stored in SSM Parameter
 | `/infrastructure/trust_anchor/arn`                | the ARN of the trust anchor used with IAM Role Anywhere         |
 
 ### Connect an edge device to the cloud
-Please note that currently this provisioning script has only been tested on a Raspberry Pi 4 installed with Rasberry Pi OS Lite (64-bit). If you have a different target you can modify the ansible scripts to meet your needs.
+Please note that currently this provisioning script has only been tested on a Raspberry Pi 4 installed with Raspberry Pi OS Lite (64-bit). If you have a different target you can modify the Ansible scripts to meet your needs.
 
 From the root of this git repository, please run:
 
@@ -160,18 +163,18 @@ From the root of this git repository, please run:
     ```bash
     pip install -r requirements.txt
     ```
-6. Edit the host names and ssh keys in [inventory.yml](./nomad-client/inventory.yml)
+6. Edit the host names and ssh keys in [inventory.yml](./nomad-client/inventory/inventory.yml)
 7. Use ping to check the instances are reachable:
     ```bash
     ansible  -i ./inventory/inventory.yml -m ping all
     ```
-8. Review and edit the `aws_region` and `profile` in [playbook.yml](./nomad-client/playbook.yml) to match your AWS credentials. Note that the region must match the one you deployed the CDK stack to since the ansible tasks will fetch parameters from AWS SSM Parameter Store to configure the nomad agent.
-9. Run the playbook. This will install all the necissary dependencies and provision certificates to the device:
+8. Review and edit the `aws_region` and `profile` in [playbook.yml](./nomad-client/playbook.yml) to match your AWS credentials. Note that the region must match the one you deployed the CDK stack to since the Ansible tasks will fetch parameters from AWS SSM Parameter Store to configure the nomad agent.
+9. Run the playbook. This will install all the necessary dependencies and provision certificates to the device:
     ```bash
     ansible-playbook -i ./inventory/inventory.yml playbook.yml 
     ```
 
-If the playbook completes successfully, you should now see clients connected to your Nomad cluster in the the ready state.
+If the playbook completes successfully, you should now see clients connected to your Nomad cluster in the ready state.
 
 ![Nomad Clients](assets/nomadui-clients.png)
 
@@ -194,14 +197,14 @@ Either the Nomad CLI or the Nomad GUI can be used to create jobs
     ```
 4. Run the nomad job:
     ```bash
-    nomad job run -check-index 0 scripts/iot-publish.nomad.hcl
+    nomad job run -check-index 0 scripts/generated/iot-publish.nomad.hcl
     ```
 5. Log into the Nomad UI and check the job status and logs
 ![Nomad Jobs](assets/nomadui-job.png)
 6. Log into the AWS IoT console and use the MQTT test client to view messages on the `hello/world` topic
 ![AWS IoT](assets/aws-iot.png)
 
-Note how we mount the following volumes in the [job](scripts/iot-publish.nomad.hcl) - this is required for boto3 to use the certificate to generate temporary credentials to make AWS Signature Version 4 requests using temporary credentials.
+Note how we mount the following volumes in the [job](scripts/generated/iot-publish.nomad.hcl) - this is required for boto3 to use the certificate to generate temporary credentials to make AWS Signature Version 4 requests using temporary credentials.
 
 ```
         volumes = [
@@ -215,7 +218,7 @@ Also note that the AWS API requests must be allowed by the `iamRolesAnywhereProf
 
 
 ### Testing disconnection from control plane
-We can simulate a disconnected client which has no internet access by using a firewall on the edge decive to block the outbound connections from the edge to the control plane.
+We can simulate a disconnected client which has no internet access by using a firewall on the edge device to block the outbound connections from the edge to the control plane.
 
 1. Find the public IP address of the instances behind the load balancer
     ```bash
@@ -239,17 +242,17 @@ We can simulate a disconnected client which has no internet access by using a fi
 ### Orchestration infrastructure (Cloud)
 
 Nomad can be used in three different configurations :
-* server mode: the control plane of the nomad cluster
-* client mode: the data plane of the nomad cluster or worker nodes. Client are managing containers for example
-* CLI mode: interact  with the cluster
+* server mode: the control plane of the nomad cluster.
+* client mode: the data plane of the nomad cluster or worker nodes. Client are managing containers for example.
+* CLI mode: interact  with the cluster.
 
-Whereas the Nomad server will be deployed on the cloud, the client or CLI mode will be deployed at the edge or at the customer premises. This repository only focus on the deployment on the nomad server on AWS.
-As nomad client  can be seen as a database application with three requirements:
+Whereas the Nomad server will be deployed on the cloud, the client or CLI mode will be deployed at the edge or at the customer premises.
+A nomad control plane  can be seen as a database application with three requirements:
 * nomad server should be deployed as a cluster with an odd number of occurrence between 1 and 9 (1 is not recommended).
 * nomad server should communicate over a LAN network
 * nomad server should be deployed with a persistent file system
 
-For securing the nomad cluster we use two layers of security: [mTLS and ACL](https://www.nomadproject.io/docs/concepts/security).
+HashiCorp Nomad relies on two layers of security: [mTLS and ACL](https://www.nomadproject.io/docs/concepts/security).
 
 ### ACM PCA Stack (Cloud)
 
@@ -263,7 +266,7 @@ Please see pricing here: https://aws.amazon.com/private-ca/pricing/
 
 Full documentation: https://docs.aws.amazon.com/privateca/latest/userguide/PcaWelcome.html
 
-## Tools
+### Tools
 The script's directory contains a python script `generate_cert.py`. This is an example of how to use boto3 to issue a certificate from ACM PCA. This script should be integrated into the device provisioning process.
 
 ### IAM Role's Anywhere Stack
@@ -276,7 +279,7 @@ This feature is well integrated into ACM PCA: https://docs.aws.amazon.com/rolesa
 
 In the case you do not wish to only use AWS IoT, it is recommended to consider IAM Role's anywhere as a more generic option. There is the added benefit of the credential provider binary being managed and released by AWS rather than yourselves: https://docs.aws.amazon.com/rolesanywhere/latest/userguide/credential-helper.html
 
-The following shows the AWS config file that sets the helper tool as the credential process:
+The following shows the AWS configuration file that sets the helper tool as the credential process:
 
 ```
 [default]
@@ -298,31 +301,21 @@ A pre-compiled ARM64 bin is available in this repo: [aws_signing_helper](nomad-c
 ## Deep dive  at the edge
 ### Description
 The structure of the repository aims at following Ansible best practices.
-* The  folder [inventory](./nomad-client/inventory)  and nested files contains description of the infrastructure. The hosts have to be accessible using SSH with password and/or key pair. Here, we made use only of the key pair. Ansible host description contains much parameter than demonstrate here. Please refer to the documentation if you need to adapt them to your infrastructure.
-* The folder [roles](./nomad-client/roles) and nested files define the role and the task to be associated with the role.
+* The  folder [inventory](./nomad-client/inventory)  and nested files contain description of the infrastructure. The hosts have to be accessible using SSH with password and/or SSH key pair. Here, we made use only of the key pair. Ansible host description contains much parameter than demonstrate here. Please refer to the [documentation](https://docs.ansible.com/ansible/latest/inventory_guide/intro_inventory.html) if you need to adapt them to your infrastructure.
+* The folder [roles](./nomad-client/roles) and nested files define the role and the task that can be executed by Ansible.
 * The file [playbook.yml](./nomad-client/playbook.yml)  defining the role to deploy and on which inventory
 
 ### Input variables
 The playbook take the  following input variable:
-* `region`:
+* `aws_region`:
     * the AWS region where the secrets are stored.
     * to be set in file [playbook.yml](./nomad-client/playbook.yml) or to be overridden through CLI.
-* `aws_profile`:
+* `profile`:
     * the AWS profile used in order to access the right IAM role or user.
     * to be set in file [playbook.yml](./nomad-client/playbook.yml) or to be overridden through CLI.
 * `nomad_version`:
     * the version of nomad client to deploy on each of the boards
     * to be set in file [playbook.yml](./nomad-client/playbook.yml) or to be overridden through CLI.
-* `acm_pca_arn`:
-    * the Amazon Certificate Manager Private Certificate Authority ARN
-* `cluster_url`:
-    * the URL of the load balancer of your Nomad control plane
-* `iam_any_trust_anchor_arn`:
-    * the ARN of the IAM Roles Anywhere trust anchor
-* `iam_any_profile_arn`:
-    * the ARN of the IAM Roles Anywhere profile
-* `iam_any_role_arn`:
-    * the ARN of the IAM Roles Anywhere role
 * list of machines:
     * the list machine define in yml format (see [doc](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html)).
     * the file name has to be passed as a parameter of the deployment. An example of inventory is implemented in file [./inventory/inventory.yml](./nomad-client/inventory/inventory.yml)
@@ -345,16 +338,6 @@ The aim of this Ansible playbook is to install a set dependencies for running no
     * definition of the mTLS authentication
     * definition of docker plugin
         * bind allocated port to localhost: ports are attached to `127.0.0.1` instead of the private IP associated with the local network.
-
-### Docker authentication against a private ECR repository
-In order to have docker fully managing the authentication against a private ECR repository, it is required to:
-* to configure docker in order to use the ECR credential helper. An example of such configuration can be found here:
-    * [configuration file](nomad-client/files/docker/config.json)
-    * [deployment example](nomad-client/roles/nomad/tasks/main.yml)
-        * task name: `Create  docker config if it does not exist`
-* to install the [ECR credential helper for docker](https://github.com/awslabs/amazon-ecr-credential-helper). An example of installation can be found:
-    * Ubuntu 18.04: [roles/nomad/tasks/ecr_login_ubuntu_18.yml](nomad-client/roles/nomad/tasks/ecr_login_ubuntu_18.yml)
-    * Debian Bullseye: [roles/nomad/tasks/ecr_login_debian.yml](nomad-client/roles/nomad/tasks/ecr_login_debian.yml)
 
 ## Troubleshooting
 

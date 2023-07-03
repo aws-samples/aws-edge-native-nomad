@@ -5,12 +5,11 @@
     "nomad-edge-native": "bin/edge-native.js"
   },
   "scripts": {
-    "build": "npx eslint . && npx tsc && npx cdk synth",
+    "build": "npx eslint . && npx tsc --build --clean && npx cdk synth",
     "watch": "npx tsc -w",
     "test": "jest",
     "cdk": "npx cdk",
-    "nag": "npx cdk synth --app='npx ts-node test/edge-native.nag.ts'",
-    "clean": "find bin/ lib/ test/ -iname \"*.d.ts\" | xargs rm -f"
+    "nag": "npx cdk synth --app='npx ts-node test/edge-native.nag.ts'"
   },
   "devDependencies": {
     "@types/jest": "^27.5.2",

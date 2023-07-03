@@ -1,4 +1,4 @@
----
+# ---
 - name: Base dependencies
   hosts: all
   become: true
@@ -12,18 +12,14 @@
   roles:
     - nomad
   vars:
-    region: "eu-west-1"
     nomad_version: "1.5.5"
-    aws_profile: "default"
-    acm_pca_arn: "{{ lookup('aws_ssm', '/infrastructure/pca/arn' )}}"
-    cluster_url: "{{ lookup('aws_ssm', '/infrastructure/nomad/endpoint' )}}"
+    aws_region: "eu-west-1"
+    profile: default
 - name: Credential process
   hosts: all
   become: true
   vars:
-    region: "eu-west-1"
-    iam_any_trust_anchor_arn: "{{ lookup('aws_ssm', '/infrastructure/trust_anchor/arn' )}}"
-    iam_any_profile_arn: "{{ lookup('aws_ssm', '/infrastructure/profile/arn' )}}"
-    iam_any_role_arn: "{{ lookup('aws_ssm', '/infrastructure/role/arn' )}}"
+    aws_region: "eu-west-1"
+    profile: default
   roles:
     - credential-process

@@ -1,4 +1,8 @@
 ---
+- name: Fetch variables from AWS SSM Parameter Store
+  set_fact:
+    acm_pca_arn: "{{ lookup('amazon.aws.aws_ssm', '/infrastructure/pca/arn', region=aws_region, aws_profile=profile) }}"
+    nomad_endpoint: "{{ lookup('amazon.aws.aws_ssm', '/infrastructure/nomad/endpoint', region=aws_region, aws_profile=profile) }}"
 - name: Download AmazonRootCa!
   delegate_to: localhost
   run_once: true
@@ -31,7 +35,7 @@
   run_once: true
 - name: Create certificate
   become: false
-  command: python3 ./provisioner.py {{ group_names[0] }} {{ aws_profile }} {{ acm_pca_arn }} {{ region }}
+  command: python3 ./provisioner.py {{ group_names[0] }} {{ profile }} {{ acm_pca_arn }} {{ aws_region }}
   delegate_to: localhost
   run_once: true
   when: not stat_result.stat.exists
@@ -122,6 +126,7 @@
     variable_end_string: ']]'
     variable_start_string: '[['
   vars:
+    cluster_url: "[[ nomad_endpoint ]]"
     robot_id: "[[ group_names[0] ]]"
     user: "[[ ansible_user ]]"
 - include: roles/nomad/tasks/debian_nomad.yml

@@ -31,6 +31,7 @@ new NomadInfrastructureStack(app, "NomadInfrastructureStack", {
         account: process.env.CDK_DEFAULT_ACCOUNT,
         region : process.env.CDK_DEFAULT_REGION
     },
+    description: "(uksb-1tupboc22)",
     cluster: {
         instanceCount: deploymentProps.cluster.instance_count,
         nomadRegion: deploymentProps.cluster.nomad_region,

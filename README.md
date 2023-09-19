@@ -95,17 +95,15 @@ Please open a terminal and go at the root of the project:
    ```bash
     cdk deploy AcmPcaStack
     ```
-6. Install the root CA certificate in ACM PCA: https://docs.aws.amazon.com/privateca/latest/userguide/PCACertInstall.html#InstallRoot. At the moment this is a required manual step and should be completed before proceeding.
-
-7. Deploy the `IamAnyStack`.
+6. Deploy the `IamAnyStack`.
    ```bash
     cdk deploy IamAnyStack
     
-8. Deploy the `NomadInfrastructureStack`.
+7. Deploy the `NomadInfrastructureStack`.
    ```bash
     cdk deploy NomadInfrastructureStack
     ```
-9. To interact with the cluster using nomad in CLI configuration you will need to initialize the following environment variable.
+8. To interact with the cluster using nomad in CLI configuration you will need to initialize the following environment variable.
     ```bash
     source ./scripts/set-nomad-env.sh
     ```
@@ -135,7 +133,6 @@ Output variables are stored in SSM Parameter
 |---------------------------------------------------|-----------------------------------------------------------------|
 | `/infrastructure/nomad/endpoint`                  | DNS of the loadbalancer exposing the Nomad cluster              |
 | `/infrastructure/nomad/token/bootstrap`           | token associated with the bootstrap policy of the nomad cluster |
-| `/infrastructure/nomad/token/policies/submit-job` | token associated with `submit-job only` policy                  |
 | `/infrastructure/pca/arn`                         | the ARN of the private CA                                       |
 | `/infrastructure/profile/arn`                     | the ARN of the profile used with IAM Role Anywhere              |
 | `/infrastructure/role/arn`                        | the ARN of the role used with IAM Role Anywhere                 |

@@ -45,37 +45,27 @@ export class NomadAcl extends Construct {
         super(scope, id)    
 
         const caCertificate =  secretsmanager.Secret.fromSecretNameV2(this,"ImportNomadCA",props.caCertSecretName)
-     
-        const bootstrapTokenParameter =  new ssm.StringParameter(this,"BootstrapSSMParameter",{
-            parameterName : "/infrastructure/nomad/token/bootstrap",
-            stringValue: "not initialised",
-            description: "Stores the bootstrap (management) token for the nomad cluster",
+
+        const bootstrapTokenParameter =  new secretsmanager.Secret(this,"BootstrapSecret",{
+            secretName: "/infrastructure/nomad/token/bootstrap"
         })
-    
-        const policyTokenParameter =  new ssm.StringParameter(this,"PolicySSMParameter",{
-            parameterName : "/infrastructure/nomad/token/policies/submit-job",
-            stringValue: "not initialised",
-            description: "Stores the  token for the  nomad client node",
-        })
-     
-    
+
         const policyContent = fs.readFileSync(path.join(__dirname,"policies/nomad-node-acl.hcl")).toString()
-        
+
         const policyContentParameter =  new ssm.StringParameter(this,"PolicyContentSSMParameter",{
             parameterName : "/infrastructure/nomad/policies/submit-job",
             stringValue: policyContent,
             description: "Stores the  policy to submit job",
         })
-    
+
         const tokenGeneratorRole = new iam.Role(this,"tokenGeneratorRole",{
             assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
             managedPolicies:[ iam.ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")]
         },
-      
+
         )
     
         bootstrapTokenParameter.grantWrite(tokenGeneratorRole)
-        policyTokenParameter.grantWrite(tokenGeneratorRole)
         policyContentParameter.grantRead(tokenGeneratorRole)
         caCertificate.grantRead(tokenGeneratorRole)
     

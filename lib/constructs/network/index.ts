@@ -25,6 +25,12 @@ export class Network extends Construct {
             natGateways: 1,
             vpcName: "nomad-cluster"
         })
+        nomadVpc.addInterfaceEndpoint('ECRDockerENdpoint',{
+            service: ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER
+        }).connections.allowInternally(ec2.Port.tcp(443))
+        nomadVpc.addInterfaceEndpoint('ECRApiENdpoint',{
+            service: ec2.InterfaceVpcEndpointAwsService.ECR
+        }).connections.allowInternally(ec2.Port.tcp(443))
         this.vpc = nomadVpc
     }
 }

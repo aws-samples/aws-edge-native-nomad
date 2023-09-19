@@ -1,14 +1,16 @@
-import { Construct } from "constructs"
-import * as cr from "aws-cdk-lib/custom-resources"
+import {Construct} from "constructs"
 import * as stepfunctions from "aws-cdk-lib/aws-stepfunctions"
 import * as iam from "aws-cdk-lib/aws-iam"
 import * as lambda from "aws-cdk-lib/aws-lambda"
 import * as cdk from "aws-cdk-lib"
+import {RemovalPolicy} from "aws-cdk-lib"
 import * as events from "aws-cdk-lib/aws-events"
 import * as targets from "aws-cdk-lib/aws-events-targets"
+import * as logs from "aws-cdk-lib/aws-logs"
 
 import * as path from "path"
 import * as fs from "fs"
+
 
 interface SecretsManagerCertificateProps {
 
@@ -41,8 +43,10 @@ export class SecretsManagerCertificate extends Construct {
     constructor(scope: Construct, id: string, props: SecretsManagerCertificateProps) {
         super(scope, id)
 
-        const sfnRole = this.getStepfunctionRole()
-        const lambdaRole = this.getLambdaRole()
+
+
+        const lambdaRole = this.getLambdaRole(props.acmPcaArn)
+
 
         this.csrLambda = new lambda.DockerImageFunction(this, "CSRFn", {
             role: lambdaRole,
@@ -53,6 +57,14 @@ export class SecretsManagerCertificate extends Construct {
             timeout: cdk.Duration.seconds(100),
             memorySize: 256,
         })
+
+        const sfnLogGroup =  new logs.LogGroup(this,'SfnLogGroup',{
+            logGroupName: "/cir/sfn/create_certificate",
+            retention: logs.RetentionDays.ONE_DAY,
+            removalPolicy: RemovalPolicy.DESTROY
+        })
+
+        const sfnRole = this.getStepfunctionRole(this.csrLambda,sfnLogGroup,props.secretPrefix)
 
         const generatorStateMachine = new stepfunctions.CfnStateMachine(this, "CertGenSfn" + props.subjectAlternativeName, {
             roleArn: sfnRole.roleArn,
@@ -68,7 +80,15 @@ export class SecretsManagerCertificate extends Construct {
                 "expiryDays": props.expiryDays.toString()
             },
             tracingConfiguration: {
-                enabled: false
+                enabled: true
+            },
+            loggingConfiguration: {
+                destinations:[{
+                    cloudWatchLogsLogGroup : {
+                        logGroupArn: sfnLogGroup.logGroupArn
+                    }
+                }],
+                level: 'ALL'
             }
         })
 
@@ -107,7 +127,7 @@ export class SecretsManagerCertificate extends Construct {
         }))
     }
 
-    private getLambdaRole(): iam.Role {
+    private getLambdaRole(acmPcaArn: string): iam.Role {
         const role = new iam.Role(this, "lambdaRole", {
             assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
             inlinePolicies: {
@@ -129,12 +149,11 @@ export class SecretsManagerCertificate extends Construct {
                         new iam.PolicyStatement({
                             effect: iam.Effect.ALLOW,
                             actions: [
-                                "acm-pca:*",
                                 "acm-pca:GetCertificate",
                                 "acm-pca:IssueCertificate"
                             ],
                             resources: [
-                                "*"
+                                acmPcaArn
                             ]
                         })
                     ]
@@ -148,7 +167,7 @@ export class SecretsManagerCertificate extends Construct {
     /**
     * Returns a role allowing the state machine to perform the different steps of the generator.
     */
-    private getStepfunctionRole(): iam.Role {
+    private getStepfunctionRole(lambda:lambda.IFunction, logGroup: logs.ILogGroup , secretPrefix: string): iam.Role {
         const role = new iam.Role(this, "sfnRole", {
             assumedBy: new iam.ServicePrincipal("states.amazonaws.com"),
             inlinePolicies: {
@@ -174,19 +193,7 @@ export class SecretsManagerCertificate extends Construct {
                                 "*"
                             ]
                         }),
-              
-                        // Allowing the role to interact with the AWS IoT service
-                        // in order to perform the generator.
-                        new iam.PolicyStatement({
-                            effect: iam.Effect.ALLOW,
-                            actions: [
-                                "iot:GetgeneratorCode",
-                                "iot:RegisterCACertificate"
-                            ],
-                            resources: [
-                                "*"
-                            ]
-                        }),
+
 
                         // Allowing the role to interact with the AWS Secrets
                         // Manager service.
@@ -196,10 +203,14 @@ export class SecretsManagerCertificate extends Construct {
                                 "secretsmanager:DescribeSecret",
                                 "secretsmanager:GetSecretValue",
                                 "secretsmanager:CreateSecret",
-                                "secretsmanager:PutSecretValue"
+                                "secretsmanager:PutSecretValue",
+                                "secretsmanager:UpdateSecret",
+                                "secretsmanager:CreateSecret"
                             ],
                             resources: [
-                                "*"
+                                `arn:${cdk.Stack.of(this).partition}:secretsmanager:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:secret:${secretPrefix}-PrivateKey-*`,
+                                `arn:${cdk.Stack.of(this).partition}:secretsmanager:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:secret:${secretPrefix}-Certificate-*`,
+                                `arn:${cdk.Stack.of(this).partition}:secretsmanager:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:secret:ca-caCertificate-*`
                             ]
                         }),
 
@@ -215,23 +226,15 @@ export class SecretsManagerCertificate extends Construct {
                             resources: [
                                 "*"
                             ]
-                        }),
-
-                        // Allowing the role to invoke the parser lambda function.
-                        new iam.PolicyStatement({
-                            effect: iam.Effect.ALLOW,
-                            actions: [
-                                "lambda:InvokeFunction"
-                            ],
-                            resources: [
-                                "*"
-                            ]
                         })
                     ]
                 })
             }
         })
 
+        lambda.grantInvoke(role)
+        logGroup.grantRead(role)
+        logGroup.grantWrite(role)
         return (role)
     }
 }

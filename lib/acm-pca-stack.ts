@@ -59,7 +59,7 @@ export class AcmPcaStack extends cdk.Stack {
 
         caSignedCertificate.node.addDependency(certificateManager)
 
-        const caActivation  = new acmpca.CfnCertificateAuthorityActivation(this,"CAActivation", {
+        new acmpca.CfnCertificateAuthorityActivation(this,"CAActivation", {
             certificate: caSignedCertificate.attrCertificate,
             certificateAuthorityArn: ca.attrArn,
             status: "ACTIVE"

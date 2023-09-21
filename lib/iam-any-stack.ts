@@ -124,8 +124,8 @@ export class IamAnyStack extends cdk.Stack {
                 ],
                 principals: [new iam.ServicePrincipal("rolesanywhere.amazonaws.com")],
                 conditions: {
-                    'ArnEquals': {
-                        'aws:SourceArn': [cfnTrustAnchorArn],
+                    "ArnEquals": {
+                        "aws:SourceArn": [cfnTrustAnchorArn],
                     },
                 }
             }),

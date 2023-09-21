@@ -102,7 +102,12 @@ export class Cluster extends Construct {
             machineImage: ecs.EcsOptimizedImage.amazonLinux2(),
             userData: ec2.UserData.forLinux(),
             role: nomadInstanceRole,
-            securityGroup: nomadSg
+            securityGroup: nomadSg,
+            blockDevices: [
+                {
+                    deviceName: "/dev/sda1",
+                    volume: ec2.BlockDeviceVolume.ebs(20, {encrypted: true}),
+                }]
         })
 
         /**

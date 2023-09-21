@@ -58,7 +58,7 @@ export class SecretsManagerCertificate extends Construct {
             memorySize: 256,
         })
 
-        const sfnLogGroup =  new logs.LogGroup(this,'SfnLogGroup',{
+        const sfnLogGroup =  new logs.LogGroup(this,"SfnLogGroup",{
             logGroupName: "/cir/sfn/create_certificate",
             retention: logs.RetentionDays.ONE_DAY,
             removalPolicy: RemovalPolicy.DESTROY
@@ -88,7 +88,7 @@ export class SecretsManagerCertificate extends Construct {
                         logGroupArn: sfnLogGroup.logGroupArn
                     }
                 }],
-                level: 'ALL'
+                level: "ALL"
             }
         })
 

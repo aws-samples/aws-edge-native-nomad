@@ -45,6 +45,7 @@ export class Ingress extends Construct {
         const accessLogBucket = new s3.Bucket(this, "AccessLogsBucket",{
             removalPolicy: RemovalPolicy.DESTROY,
             enforceSSL: true,
+            autoDeleteObjects: true
         })
         accessLogBucket.grantPut( new iam.AccountPrincipal(cdk.Stack.of(this).account))
 

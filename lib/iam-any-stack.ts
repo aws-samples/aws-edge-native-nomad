@@ -23,7 +23,7 @@ export class IamAnyStack extends cdk.Stack {
             }
         })
 
-        const policyRole = this.getPolicyRole()
+        const policyRole = this.getPolicyRole(cfnTrustAnchor.attrTrustAnchorArn)
 
         const cfnProfile = new rolesanywhere.CfnProfile(this, "CfnProfile", {
             name: "CfnProfile",
@@ -67,14 +67,12 @@ export class IamAnyStack extends cdk.Stack {
 
 
     // This should be restricted to the least privilege based on the access required for the use-case
-    private getPolicyRole(): iam.Role {
+    private getPolicyRole(cfnTrustAnchorArn: string): iam.Role {
         const role = new iam.Role(this, "iamRolesAnywhereProfileRole", {
             assumedBy:  new iam.ServicePrincipal("rolesanywhere.amazonaws.com"),
             managedPolicies: [
                 iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonEC2ContainerRegistryFullAccess"),
                 iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonKinesisFullAccess"),
-                iam.ManagedPolicy.fromAwsManagedPolicyName("AWSIoTDataAccess"),
-                iam.ManagedPolicy.fromAwsManagedPolicyName("AdministratorAccess"),
             ],
             inlinePolicies: {
                 "Policy": new iam.PolicyDocument({
@@ -124,9 +122,15 @@ export class IamAnyStack extends cdk.Stack {
                     "sts:TagSession",
                     "sts:SetSourceIdentity"
                 ],
-                principals: [new iam.ServicePrincipal("rolesanywhere.amazonaws.com")]
+                principals: [new iam.ServicePrincipal("rolesanywhere.amazonaws.com")],
+                conditions: {
+                    "ArnEquals": {
+                        "aws:SourceArn": [cfnTrustAnchorArn],
+                    },
+                }
             }),
         )
+
 
         return (role)
     }

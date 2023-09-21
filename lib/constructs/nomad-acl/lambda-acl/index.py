@@ -17,6 +17,19 @@ client_ssm = session.client(
 )
 
 
+def put_secret(secret_name, secret_value):
+    # This functions aims at writing a secret in AWS Secrets Manager
+    try:
+        client_secretsmanager.put_secret_value(
+            SecretId=secret_name,
+            SecretString=secret_value
+        )
+    except ClientError as e:
+        # For a list of exceptions thrown, see
+        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+        raise e
+
+
 def download_certificate(secret_name):
     # In this sample we only handle the specific exceptions for the 'GetSecretValue' API.
     # See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
@@ -60,7 +73,6 @@ def download_certificate(secret_name):
         else:
             # raise exception here
             raise ValueError('Secret should be stored as SecretString')
-    print(certificate_path)
     return certificate_path
 
 
@@ -82,29 +94,23 @@ def handler(event, context):
         # try to get create bootstrap token
         raw_bootstrap_response = requests.post(
             f'https://{nomad_address}:4646/v1/acl/bootstrap',
-            verify=False)
+            verify=ca_certificate_path,
+            timeout=5)
         if raw_bootstrap_response.status_code == 200:
             bootstrapped = True
             bootstrap_response = raw_bootstrap_response.json()
-            print(bootstrap_response)
             nomad_bootstrap_token = bootstrap_response['SecretID']
         elif raw_bootstrap_response.status_code == 400:
             already_bootstrapped = True
             bootstrapped = True
-            print(raw_bootstrap_response)
 
     if not already_bootstrapped:
-        # save bootstrap token in SSM parameter store
-        client_ssm.put_parameter(
-            Name="/infrastructure/nomad/token/bootstrap",
-            Value=nomad_bootstrap_token,
-            Type='SecureString',
-            Overwrite=True,
-        )
+        # save bootstrap token in AWS Secrets Manager
+        put_secret("/infrastructure/nomad/token/bootstrap", nomad_bootstrap_token)
 
-        ###
-        ### Create token for nomad client
-        ###
+        headers = {
+            "X-Nomad-Token": nomad_bootstrap_token
+        }
 
         # retrieve nom policy from SSM parameter
         policy_response = client_ssm.get_parameter(
@@ -130,10 +136,10 @@ def handler(event, context):
             f'https://{nomad_address}:4646/v1/acl/policy/submit-job',
             json=data_policy,
             headers=headers,
-            verify=False)
+            verify=ca_certificate_path,
+            timeout=5)
 
         raw_create_policy_response.raise_for_status()
-
         # save token in SSM parameter store
         # submit policy to nomad
         data_auth = {
@@ -168,11 +174,12 @@ def handler(event, context):
             f'https://{nomad_address}:4646/v1/acl/auth-method',
             json=data_auth,
             headers=headers,
-            verify=False)
+            verify=ca_certificate_path,
+            timeout=5
+        )
 
         raw_create_auth_response.raise_for_status()
         create_auth_response = raw_create_auth_response.json()
-        print(create_auth_response)
 
         data_role = {
             "Name": "engineering-role",
@@ -188,11 +195,12 @@ def handler(event, context):
             f'https://{nomad_address}:4646/v1/acl/role',
             json=data_role,
             headers=headers,
-            verify=False)
+            verify=ca_certificate_path,
+            timeout=5
+        )
 
         raw_create_role_response.raise_for_status()
         create_role_response = raw_create_role_response.json()
-        print(create_role_response)
 
         data_binding_role = {
             "Description": "oidc-auth-acl-binding-rule",
@@ -206,11 +214,12 @@ def handler(event, context):
             f'https://{nomad_address}:4646/v1/acl/binding-rule',
             json=data_binding_role,
             headers=headers,
-            verify=False)
+            verify=ca_certificate_path,
+            timeout=5
+        )
 
         raw_create__binding_role_response.raise_for_status()
         create__binding_role_response = raw_create__binding_role_response.json()
-        print(create__binding_role_response)
 
     return {
         "status_code": "OK"

@@ -15,7 +15,6 @@ export interface NomadProps extends cdk.StackProps{
 
 }
 
-
 export class AcmPcaStack extends cdk.Stack {
 
     public caArn: string
@@ -36,6 +35,34 @@ export class AcmPcaStack extends cdk.Stack {
                 serialNumber: "001",
                 locality: "Seattle"
             },
+        })
+
+        const certificateManager = new SecretsManagerCertificate(this, "ServerCert", {
+            acmPcaArn: ca.attrArn,
+            commonName: `*.elb.${props.nomadRegion}.amazonaws.com`,
+            subjectAlternativeName: `server.${props.nomadRegion}.nomad`,
+            expiryDays: 365,
+            secretPrefix: `nomad-server-${ props.nomadRegion}`
+        })
+
+        const caSignedCertificate = new acmpca.CfnCertificate(this,"CertificateCreation",{
+            certificateAuthorityArn: ca.attrArn,
+            signingAlgorithm: "SHA256WITHRSA",
+            certificateSigningRequest: ca.attrCertificateSigningRequest,
+            templateArn: "arn:aws:acm-pca:::template/RootCACertificate/V1",
+            validity: {
+                type: "YEARS",
+                value: 10
+            }
+
+        })
+
+        caSignedCertificate.node.addDependency(certificateManager)
+
+        new acmpca.CfnCertificateAuthorityActivation(this,"CAActivation", {
+            certificate: caSignedCertificate.attrCertificate,
+            certificateAuthorityArn: ca.attrArn,
+            status: "ACTIVE"
         })
 
         this.caArn = ca.attrArn
@@ -59,13 +86,7 @@ export class AcmPcaStack extends cdk.Stack {
             })
         })
 
-        new SecretsManagerCertificate(this, "ServerCert", {
-            acmPcaArn: ca.attrArn,
-            commonName: `*.elb.${props.nomadRegion}.amazonaws.com`,
-            subjectAlternativeName: `server.${props.nomadRegion}.nomad`,
-            expiryDays: 365,
-            secretPrefix: `nomad-server-${ props.nomadRegion}`
-        })
+
 
         new ssm.StringParameter(this,"PrivateCAArn",{
             parameterName: "/infrastructure/pca/arn",

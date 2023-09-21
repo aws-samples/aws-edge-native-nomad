@@ -44,7 +44,9 @@ export class Authentication extends Construct {
                 ],
             },
         })
+        console.log(props.domainPrefix)
         userpool.addDomain("Domain", {
+
             cognitoDomain : {
                 // This needs to be globally unique for the region - https://{domain}.auth.{region}.amazoncognito.com
                 domainPrefix: props.domainPrefix

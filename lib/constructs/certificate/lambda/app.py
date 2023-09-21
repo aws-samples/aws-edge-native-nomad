@@ -8,8 +8,8 @@ import boto3
 
 acm_pca_client = boto3.client('acm-pca')
 
-def handler(event, context):
 
+def handler(event, context):
     # Get certificate parameters from Lambda event
     acm_pca_arn = event['acmPcaArn']
     cn = event['commonName']
@@ -27,20 +27,20 @@ def handler(event, context):
     csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([
         x509.NameAttribute(NameOID.COMMON_NAME, cn),
     ])).add_extension(
-            x509.SubjectAlternativeName([
-                x509.DNSName(cn),
-                x509.DNSName(san),
-                x509.DNSName(f"localhost"),
-                x509.IPAddress(ipaddress.IPv4Address("127.0.0.1")),
-            ]),
+        x509.SubjectAlternativeName([
+            x509.DNSName(cn),
+            x509.DNSName(san),
+            x509.DNSName(f"localhost"),
+            x509.IPAddress(ipaddress.IPv4Address("127.0.0.1")),
+        ]),
         critical=True,
-    # Sign the CSR with our private key.
+        # Sign the CSR with our private key.
     ).sign(new_cert_key, hashes.SHA256())
 
     private_key_bytes = new_cert_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption()
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption()
     )
 
     # A CSR must provide either a subject name or a subject alternative name or the request will be rejected.

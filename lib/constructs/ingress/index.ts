@@ -1,3 +1,4 @@
+import * as cdk from "aws-cdk-lib"
 import {Duration, RemovalPolicy} from "aws-cdk-lib"
 import * as ec2 from "aws-cdk-lib/aws-ec2"
 import {Construct} from "constructs"
@@ -5,6 +6,8 @@ import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2"
 import * as ecs from "aws-cdk-lib/aws-ecs"
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager"
 import * as ssm from "aws-cdk-lib/aws-ssm"
+import * as s3 from "aws-cdk-lib/aws-s3"
+import * as iam from "aws-cdk-lib/aws-iam"
 
 export interface IngressProps {
 
@@ -39,6 +42,14 @@ export class Ingress extends Construct {
     constructor(scope: Construct, id: string, props: IngressProps) {
         super(scope, id)
 
+        const accessLogBucket = new s3.Bucket(this, "AccessLogsBucket",{
+            removalPolicy: RemovalPolicy.DESTROY,
+            enforceSSL: true,
+            autoDeleteObjects: true
+        })
+        accessLogBucket.grantPut( new iam.AccountPrincipal(cdk.Stack.of(this).account))
+
+
         const templatedSecret = new secretsmanager.Secret(this, "TemplatedSecret", {
             generateSecretString: {
                 excludeUppercase: true,
@@ -48,6 +59,7 @@ export class Ingress extends Construct {
             },
             removalPolicy: RemovalPolicy.DESTROY,
         })
+
         // Creating a network load-balancer for Nomad.
         const nlb = new elbv2.NetworkLoadBalancer(this, "Nlb", {
             vpc: props.nomadVpc,
@@ -57,6 +69,7 @@ export class Ingress extends Construct {
             }),
             internetFacing: true
         })
+        nlb.logAccessLogs(accessLogBucket)
 
         new ssm.StringParameter(this,"NomadDNS", {
             description: "URL of the nomad cluster",

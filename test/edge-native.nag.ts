@@ -26,7 +26,7 @@ new IamAnyStack(app, "IamAnyStack", {
 
 const randomPrefix = Math.floor(Math.random()*1000000000)
 const prefix = `cluster-${randomPrefix}`
-
+console.log(prefix)
 new NomadInfrastructureStack(app, "NomadInfrastructureStack", {
     // define region and account so the VPC construct will use all AZs in a given region
     env : {
